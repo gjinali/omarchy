@@ -2,6 +2,9 @@
 
 # omarchy:summary=Prompt for required reboot or service restarts after updates
 
+# A direct restart check must enforce the same hardware gate as a full update.
+omarchy-update-verify-kernel-modules || exit 1
+
 echo
 
 confirm_reboot() {
