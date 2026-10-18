@@ -1,7 +1,7 @@
 #!/bin/bash
 
 set -euo pipefail
-source "$(dirname "$0")/base-test.sh"
+source "$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)/base-test.sh"
 
 work=$(mktemp -d)
 trap 'rm -rf "$work"' EXIT
@@ -19,6 +19,8 @@ printf '%s\n' "$*" >> "$PACMAN_LOG"
 [[ ${BROKEN_DATABASE:-0} != 1 ]] || exit 1
 case "$*" in
   *-Qq) printf 'base\n%s\n' ${KERNELS:-linux-omarchy linux} ;;
+  *"-Qlq ${BROKEN_FILE_LIST:-none}") exit 1 ;;
+  *"-Qlq ${EMPTY_FILE_LIST:-none}") ;;
   *"-Qlq linux-omarchy") printf '%s/usr/lib/modules/7.2.8-9-omarchy/modules.order\n' "$TEST_ROOT" ;;
   *"-Qlq linux") printf '%s/usr/lib/modules/7.2.11-arch1-1/modules.order\n' "$TEST_ROOT" ;;
   *) exit 1 ;;
@@ -97,6 +99,13 @@ KERNELS=linux-zen run_check || fail "an alternative-kernel system is rejected" "
 pass "alternative kernels are left to the user"
 
 if BROKEN_DATABASE=1 run_check; then fail "an unreadable package database bypasses verification"; fi
+install_module $fallback facetimehd
+run_check || fail "complete kernels are rejected before the file-list cases" "$(cat "$work/out")"
+for kernel in linux-omarchy linux; do
+  if BROKEN_FILE_LIST=$kernel run_check; then fail "an unreadable file list for $kernel bypasses verification"; fi
+  if EMPTY_FILE_LIST=$kernel run_check; then fail "an installed $kernel without modules.order bypasses verification"; fi
+  grep -q "Cannot determine the modules of $kernel" "$work/out" || fail "an unresolved $kernel is not named" "$(cat "$work/out")"
+done
 pass "package database errors cannot bypass verification"
 
 rm "$work/root/usr/lib/omarchy/verify-snd-hda-macbookpro" "$work/root/usr/lib/omarchy/verify-facetimehd"

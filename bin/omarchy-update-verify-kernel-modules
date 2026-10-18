@@ -42,15 +42,24 @@ installed=$(pacman --root "$root" -Qq)
 
 # Only the module directories pacman owns describe what the next boot loads;
 # directories preserved from earlier boots do not.
+# An installed kernel whose modules can't be resolved fails the check, so a
+# database error can't leave it unverified.
 targets=""
 for kernel in "${kernel_packages[@]}"; do
   grep -Fxq "$kernel" <<< "$installed" || continue
+  files=$(pacman --root "$root" -Qlq "$kernel")
+  kernel_targets=""
   while IFS= read -r file; do
     target=${file#"${root%/}/"}
     if [[ $target =~ ^usr/lib/modules/[^/]+/modules\.order$ ]]; then
-      targets+="$target"$'\n'
+      kernel_targets+="$target"$'\n'
     fi
-  done < <(pacman --root "$root" -Qlq "$kernel")
+  done <<< "$files"
+  if [[ -z $kernel_targets ]]; then
+    echo "ERROR: Cannot determine the modules of $kernel for hardware verification." >&2
+    exit 1
+  fi
+  targets+=$kernel_targets
 done
 [[ -n $targets ]] || exit 0
 
