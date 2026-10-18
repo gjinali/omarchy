@@ -27,7 +27,6 @@ steps=(
   omarchy-update-aur-pkgs
   omarchy-update-mise
   omarchy-update-orphan-pkgs
-  omarchy-update-verify-kernel-modules
   omarchy-update-analyze-logs
   omarchy-update-status
   omarchy-update-restart
@@ -75,7 +74,6 @@ expected_steps() {
     omarchy-update-aur-pkgs \
     omarchy-update-mise \
     omarchy-update-orphan-pkgs \
-    omarchy-update-verify-kernel-modules \
     omarchy-update-analyze-logs \
     omarchy-update-status \
     omarchy-update-stay-awake \
@@ -108,21 +106,3 @@ for step in omarchy-migrate omarchy-hook omarchy-update-aur-pkgs omarchy-update-
   fi
 done
 pass "a blocked package upgrade stops the update before it migrates"
-
-# Pacman can return success after a PostTransaction DKMS hook fails. The
-# package step succeeds here while hardware verification rejects the result.
-cat >"$stub_bin/omarchy-update-verify-kernel-modules" <<'STUB'
-#!/bin/bash
-printf '%s unattended=%s\n' "${0##*/}" "${OMARCHY_UPDATE_UNATTENDED:-}" >>"$STEP_LOG"
-exit 1
-STUB
-chmod +x "$stub_bin/omarchy-update-verify-kernel-modules"
-if run_update -y; then
-  fail "an update with missing required kernel modules reports success"
-fi
-for step in omarchy-update-status omarchy-update-restart; do
-  if grep -q "^$step " "$test_tmp/steps"; then
-    fail "an update with missing required kernel modules still runs $step"
-  fi
-done
-pass "failed hardware verification prevents success and a reboot recommendation"

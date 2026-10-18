@@ -126,8 +126,6 @@ omarchy-update
   │  install/config/snapper.sh, and the update continues without one)
   ├─ omarchy-update-stay-awake start
   ├─ run package updates, migrations, hooks, and log analysis
-  ├─ omarchy-update-verify-kernel-modules
-  │    └─ abort if a required compatibility module is missing for the installed stock kernel
   ├─ omarchy-update-status
   │    └─ refresh or clear the shell update indicator
   ├─ omarchy-update-stay-awake stop
@@ -136,8 +134,6 @@ omarchy-update
 ```
 
 Important behavior:
-
-- Package-owned hardware verifiers run after package updates and before success or a reboot recommendation. Pacman can return success despite a failed post-transaction DKMS hook, so its exit status alone cannot establish hardware readiness. Verification checks the stock kernel owned by the installed `linux` package, excluding preserved module directories from previous boots. `omarchy-update-restart` repeats the check when invoked directly. Failure leaves the update incomplete and asks the user to repair the drivers or restore the previous kernel and headers before rebooting. This check does not roll back a committed package transaction.
 
 - In dev-link mode, `omarchy update` fast-forwards the active checkout from its
   configured upstream before changing system packages or running migrations.
